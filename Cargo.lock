@@ -587,6 +587,8 @@ name = "li_ning_track_shipment"
 version = "0.1.0"
 dependencies = [
  "headless_chrome",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
