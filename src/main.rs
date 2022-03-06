@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use std::time;
 
+use std::process::Command;
+
 use headless_chrome::{
     protocol::cdp::types::Event, protocol::cdp::Page::CaptureScreenshotFormatOption, Browser,
     LaunchOptions,
@@ -21,22 +23,11 @@ macro_rules! element {
     };
     }
 
-fn main() {
-    const url: &str = "https://lining.studio/sales/guest/form/";
+const URL: &str = "https://lining.studio/sales/guest/form/";
 
-    let mut args = std::env::args();
+const WEBHOOK_URL: &str = "https://discord.com/api/webhooks/949634126942715924/LQ2Es081IC-EKqh3RVg_caUKm3G4ALZIZJWPpcuQMT5YnrU04NowH73_A9xIQAQ1VITE";
 
-    args.next();
-
-    // get order id name from program arguments
-    let order_id = args.next().expect("order_id is empty");
-
-    // get billing last name for login from program arguments
-    let last_name = args.next().expect("billing last name is empty");
-
-    // get email for login from program arguments
-    let email = args.next().expect("email is empty");
-
+fn screenshot_shipment(order_id: &String, last_name: &String, email: &String) {
     let browser = Browser::new(
         LaunchOptions::default_builder()
             .headless(false)
@@ -47,17 +38,17 @@ fn main() {
 
     let tab = browser.wait_for_initial_tab().unwrap();
 
-    tab.navigate_to(url).unwrap();
+    tab.navigate_to(URL).unwrap();
 
     tab.wait_until_navigated().unwrap();
 
     tab.add_event_listener(Arc::new(move |e: &Event| match e {
         Event::PageWindowOpen(p) => {
-            println!("{:?}", p);
             std::thread::sleep_ms(1500);
+
             let tabs = browser.get_tabs();
 
-            let shipment_tab = &tabs.lock().unwrap()[1];
+            let shipment_tab = &tabs.lock().unwrap()[0];
 
             shipment_tab.bring_to_front().unwrap();
 
@@ -74,6 +65,21 @@ fn main() {
                     .as_millis();
 
                 std::fs::write(format!("./screenshots/{}.png", time), buffer).unwrap();
+
+                Command::new("curl")
+                    .args(vec![
+                        "-F",
+                        r#"'payload_json={"content": "Shipment Status"}'"#,
+                        "-F",
+                        &format!("file1=@screenshots/{}.png", time),
+                        WEBHOOK_URL,
+                    ])
+                    .spawn()
+                    .unwrap()
+                    .wait()
+                    .unwrap();
+
+                shipment_tab.close(false).unwrap();
             }
         }
         _ => (),
@@ -105,7 +111,29 @@ fn main() {
 
     track.click().unwrap();
 
-    println!("Hello, world!");
+    tab.close(false).unwrap();
+}
 
-    std::thread::sleep_ms(100000);
+fn main() {
+    let mut args = std::env::args();
+
+    args.next();
+
+    // get order id name from program arguments
+    let order_id = args.next().expect("order_id is empty");
+
+    // get billing last name for login from program arguments
+    let last_name = args.next().expect("billing last name is empty");
+
+    // get email for login from program arguments
+    let email = args.next().expect("email is empty");
+
+    screenshot_shipment(&order_id, &last_name, &email);
+
+    loop {
+        // every 5 hours
+        std::thread::sleep(time::Duration::from_secs(60 * 60 * 5));
+
+        screenshot_shipment(&order_id, &last_name, &email);
+    }
 }
