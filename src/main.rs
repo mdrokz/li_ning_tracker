@@ -25,7 +25,7 @@ macro_rules! element {
 
 const URL: &str = "https://lining.studio/sales/guest/form/";
 
-const WEBHOOK_URL: &str = "https://discord.com/api/webhooks/949634126942715924/LQ2Es081IC-EKqh3RVg_caUKm3G4ALZIZJWPpcuQMT5YnrU04NowH73_A9xIQAQ1VITE";
+const WEBHOOK_URL: &str = "" // add your own discord webhook url;
 
 fn screenshot_shipment(order_id: &String, last_name: &String, email: &String) {
     let browser = Browser::new(
